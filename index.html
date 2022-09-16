@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script> -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+    <style>
+        li {
+            list-style: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+
+    </div>
+
+    <script type="text/babel">
+        const names = ['racaiii', 'raciii', 'John jo', 'Paul', 'Georg', 'Ringo', 'Pete Best', 'Stuart Sutcliffe', 'Richard Starkey', 'George', 'Porge', 'Su isti', 'aS s s', 'abS s s s', 'bsss', 'asssss'];
+
+        const List = ({ search, names }) => {
+
+            const makeWeightObj = word => matches => ({ word, matches });
+            const getFirstMatchIndex = (el) => el.matches[0] && el.matches[0].index;
+
+            const comparators = [
+                (a, b) => {
+                    const weigth = 100;
+                    return {
+                        weight1: +(a.matches.length > b.matches.length) && weigth,
+                        weight2: +(a.matches.length < b.matches.length) && weigth
+                    }
+                },
+                (a, b) => {
+                    const weight = 1000;
+                    const isFirstWeight = (el) => getFirstMatchIndex(el) === 0;
+
+                    const isFirstA = isFirstWeight(a);
+                    const isFirstB = isFirstWeight(b);
+
+                    return {
+                        weight1: +isFirstA && weight,
+                        weight2: +isFirstB && weight
+                    }
+                },
+                (a, b) => {
+                    const weight = 10;
+
+                    return {
+                        weight1: +(getFirstMatchIndex(a) < getFirstMatchIndex(b)) && weight,
+                        weight2: +(getFirstMatchIndex(a) > getFirstMatchIndex(b)) && weight
+                    }
+                },
+            ]
+
+            const namesWeights = React.useMemo(() => {
+
+                return names.map(word => {
+                    const weightObj = makeWeightObj(word);
+
+                    if (search === "") return weightObj([]);
+
+                    const regex = new RegExp(search, 'gi');
+                    const matches = Array.from(word.matchAll(regex));
+                    
+                    return weightObj(matches);
+                });
+            }, [search]);                
+
+
+            return (
+                    <div>
+                        <h1>:{search}</h1>
+                        <ul> 
+                            {namesWeights.sort((a, b) => {
+                                // none of matches
+                                if (!a.matches.length && !b.matches.length) return 0;
+
+                                let w1 = 0;
+                                let w2 = 0;
+
+                                comparators.forEach(comparator => {
+                                    const { weight1, weight2 } = comparator(a, b);
+
+                                    w1 += weight1;
+                                    w2 += weight2;
+                                });
+
+                                return w2 - w1;
+                            }).map(el => {
+                                el.weight = 0;
+
+                                for (let i = 0; i < names.length; i++) {
+                                    const word = names[i];
+
+                                    comparators.forEach(comparator => {
+                                        const { weight1, weight2 } = comparator(el, namesWeights[i]);
+
+                                        el.weight += weight1;
+                                    })
+                                }
+
+                                return el;
+                            })
+                            .map((weight, i) => {
+                                const matchesParts = weight.matches;
+                                const word = weight.word;
+
+                                const highlights = matchesParts.map(part => {
+                                    return [part.index, part.index + part[0].length];
+                                })
+
+                                const isHighlighted = (index) => {
+                                    return highlights.some(highlight => {
+                                        return index >= highlight[0] && index < highlight[1];
+                                    })
+                                }
+
+                                const formattedText = Array.from(word, (el, i) => {
+                                    if (isHighlighted(i)) return <mark>{el}</mark>;
+
+                                    return el;
+                                })
+
+                                return (
+                                    <li>{formattedText}</li>
+                                )
+                            })}    
+                        </ul>
+                    </div>
+            )
+        }
+
+
+        const App = () => {
+            const [search, setSearch] = React.useState('');
+            
+            const handleChange = (e) => {
+                setSearch(e.target.value.trim());
+            };
+
+            return (
+               <>
+                    <input value={search} onChange={handleChange} />
+                    <List search={search} names={names} />
+               </>
+            )
+        }
+
+
+        ReactDOM.createRoot(document.getElementById('app')).render(<App />)
+    </script>
+</body>
+</html>
