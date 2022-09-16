@@ -12,8 +12,126 @@
 
     <script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
     <style>
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        :root {
+            --slider-width: 16px;
+            --slider-height: 16px;
+            --switch-width: 40px;
+            --switch-height: 20px;
+            --switch-margin-x: 1px;
+            --switch-margin-top: 2px;
+        }
+        
+        .slider {
+            border-radius: 14px;
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+        }
+
+        input:checked + .slider::after {
+            content: 'on';
+            font-size: 12px;
+            position: absolute;
+            left: 8px;
+            top: 2px;
+        }
+
+        input + .slider::after {
+            content: 'off';
+            font-size: 12px;
+            position: absolute;
+            right: 8px;
+            top: 3px;
+        }
+
+        .switch {
+            border-radius: 14px;
+            border: 1px solid black;
+            position: relative;
+            display: inline-block;
+            width: var(--switch-width);
+            height: var(--switch-height);
+        }
+
+        .slider::before {
+            transition: .2s;
+            content: '';
+            width:  var(--slider-width);
+            height: var(--slider-height);
+            top: var(--switch-margin-top);
+            left: var(--switch-margin-x);
+            background-color:gray;
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        input:checked + .slider::before {
+            transform: translateX(calc( var(--switch-width) - var(--slider-width) - var(--switch-margin-x)* 2) );
+            background-color: #30db05;
+            box-shadow: rgba(145, 226, 14, 0.74) 0px 0px 10px;
+        }
+
+        .checkbox {
+            height: 10px;
+            width: 10px;
+        }
         li {
             list-style: none;
+        }
+
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        body > div {
+            height: 100vh;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .search-input {
+            width: 300px;
+            height: 30px;
+            border: 1px solid black;
+            border-radius: 5px;
+            padding: 5px;
+            font-size: 26px;
+        }
+
+        .list-wrapper ul {
+            font-size: 30px;
+        }
+        .list-wrapper h1 {
+            font-size: 40px;
+        }
+
+        .settings {
+            display: flex;
+            margin: 8px;
+        }
+        .settings label {
+            margin-right: 6px;
+        }
+
+        .search-container {
         }
     </style>
 </head>
@@ -23,10 +141,20 @@
     </div>
 
     <script type="text/babel">
-        const names = ['racaiii', 'raciii', 'John jo', 'Paul', 'Georg', 'Ringo', 'Pete Best', 'Stuart Sutcliffe', 'Richard Starkey', 'George', 'Porge', 'Su isti', 'aS s s', 'abS s s s', 'bsss', 'asssss'];
+        const names = ['racaiii', 'raciii', 'John jo', 'Paul', 'Georg', 'Ringo', 'Pete Best', 'Stuart Sutcliffe', 'Richard Starkey', 'George', 'Porge', 'Su isti', 'aS s s', 'abS s s s', 'bsss', 'asssss', 'abcdef', 'abcde', 'abc'];
 
-        const List = ({ search, names }) => {
+        const ListElement = ({weight, text, maxWeight}) => {
+            const getRedCoef = () => {
+                return Math.round(weight * 255 / maxWeight);
+            };
 
+            return <li align='left'>
+                {text}
+                <span style={{fontWeight: 'bold', marginLeft: '8px', color: `rgb(${getRedCoef()}, 0, 0)`}}>{weight}</span>
+            </li>
+        }
+
+        const List = ({ search, names, showWeight, sorting, highlighting }) => {
             const makeWeightObj = word => matches => ({ word, matches });
             const getFirstMatchIndex = (el) => el.matches[0] && el.matches[0].index;
 
@@ -62,7 +190,7 @@
 
             const namesWeights = React.useMemo(() => {
 
-                return names.map(word => {
+                const withMathes = names.map(word => {
                     const weightObj = makeWeightObj(word);
 
                     if (search === "") return weightObj([]);
@@ -72,46 +200,51 @@
                     
                     return weightObj(matches);
                 });
-            }, [search]);                
+
+                if (sorting) {
+                    withMathes.sort((a, b) => {
+                        // none of matches
+                        if (!a.matches.length && !b.matches.length) return 0;
+
+                        let w1 = 0;
+                        let w2 = 0;
+
+                        comparators.forEach(comparator => {
+                            const { weight1, weight2 } = comparator(a, b);
+
+                            w1 += weight1;
+                            w2 += weight2;
+                        });
+
+                        return w2 - w1;
+                    })
+                }
+
+                if (showWeight) {
+                    Array.from(withMathes, ((el, i) => {
+                        el.weight = 0;
+
+                        for (let i = 0; i < withMathes.length; i++) {
+                            comparators.forEach(comparator => {
+                                const { weight1, weight2 } = comparator(el, withMathes[i]);
+
+                                el.weight += weight1;
+                            })
+                        }
+                    }))
+                }
+
+                return withMathes;
+            }, [search, showWeight]);                
 
 
             return (
-                    <div>
+                    <div className="list-wrapper">
                         <h1>:{search}</h1>
                         <ul> 
-                            {namesWeights.sort((a, b) => {
-                                // none of matches
-                                if (!a.matches.length && !b.matches.length) return 0;
-
-                                let w1 = 0;
-                                let w2 = 0;
-
-                                comparators.forEach(comparator => {
-                                    const { weight1, weight2 } = comparator(a, b);
-
-                                    w1 += weight1;
-                                    w2 += weight2;
-                                });
-
-                                return w2 - w1;
-                            }).map(el => {
-                                el.weight = 0;
-
-                                for (let i = 0; i < names.length; i++) {
-                                    const word = names[i];
-
-                                    comparators.forEach(comparator => {
-                                        const { weight1, weight2 } = comparator(el, namesWeights[i]);
-
-                                        el.weight += weight1;
-                                    })
-                                }
-
-                                return el;
-                            })
-                            .map((weight, i) => {
-                                const matchesParts = weight.matches;
-                                const word = weight.word;
+                            {namesWeights.map((element, i) => {
+                                const matchesParts = element.matches;
+                                const word = element.word;
 
                                 const highlights = matchesParts.map(part => {
                                     return [part.index, part.index + part[0].length];
@@ -130,7 +263,7 @@
                                 })
 
                                 return (
-                                    <li>{formattedText}</li>
+                                    <ListElement maxWeight={namesWeights[0].weight} weight={element.weight} text={formattedText}/>
                                 )
                             })}    
                         </ul>
@@ -141,15 +274,55 @@
 
         const App = () => {
             const [search, setSearch] = React.useState('');
-            
-            const handleChange = (e) => {
+            const [highlight, setHighlight] = React.useState(false);
+            const [showWeight, setShowWeight] = React.useState(false);
+            const [sorting, setSorting] = React.useState(true);
+
+            const handleChangeSearch = (e) => {
                 setSearch(e.target.value.trim());
             };
 
+
             return (
-               <>
-                    <input value={search} onChange={handleChange} />
-                    <List search={search} names={names} />
+               <> 
+                  <header>
+                  </header>
+                  <main>
+                    <div className="search-container">
+
+                        <div className="settings">
+                            <div>
+                                <label htmlFor="sort">Sort</label>
+                                <label className="switch">
+                                    <input type="checkbox" id="sort" checked={sorting} onChange={() => setSorting(!sorting)} />
+                                    <span className="slider"></span>
+                                </label>
+                            </div>
+                            <div>
+                                <label htmlFor="highlight">Highlight</label>
+                                <label className="switch">
+                                    <input type="checkbox" id="highlight" checked/>
+                                    <span className="slider"></span>
+                                </label>
+                            </div>
+                            <div>
+                                <label htmlFor="weight">Weight</label>
+                                <label className="switch">
+                                    <input type="checkbox" id="weight" checked={showWeight} onChange={() => setShowWeight(!showWeight)}/>
+                                    <span className="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <input className="search-input" value={search} onChange={handleChangeSearch} />
+
+                    </div>
+
+
+                    <List search={search} names={names} showWeight={showWeight} sorting={sorting}/>
+                  </main>
+                  <footer>
+                    For demonstration :3
+                  </footer>
                </>
             )
         }
