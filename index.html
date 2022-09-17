@@ -144,13 +144,19 @@
         const names = ['racaiii', 'raciii', 'John jo', 'Paul', 'Georg', 'Ringo', 'Pete Best', 'Stuart Sutcliffe', 'Richard Starkey', 'George', 'Porge', 'Su isti', 'aS s s', 'abS s s s', 'bsss', 'asssss', 'abcdef', 'abcde', 'abc'];
 
         const ListElement = ({weight, text, maxWeight}) => {
-            const getRedCoef = () => {
-                return Math.round(weight * 255 / maxWeight);
+            const getRgbTone = () => {
+                if (weight === undefined) return;
+
+                const d = Math.round(weight * 155 / maxWeight);
+                const green = 100 - d;
+                const blue = 100 - d;
+
+                return `rgb(255, ${green}, ${blue})`;
             };
 
-            return <li align='left'>
+            return <li key={text} style={{color: getRgbTone()}} align='left'>
                 {text}
-                <span style={{fontWeight: 'bold', marginLeft: '8px', color: `rgb(${getRedCoef()}, 0, 0)`}}>{weight}</span>
+                <span style={{fontWeight: 'bold', marginLeft: '8px'}}>{weight}</span>
             </li>
         }
 
@@ -235,7 +241,7 @@
                 }
 
                 return withMathes;
-            }, [search, showWeight]);                
+            }, [search, showWeight, sorting]);                
 
 
             return (
@@ -279,7 +285,7 @@
             const [sorting, setSorting] = React.useState(true);
 
             const handleChangeSearch = (e) => {
-                setSearch(e.target.value.trim());
+                setSearch(e.target.value);
             };
 
 
@@ -289,7 +295,6 @@
                   </header>
                   <main>
                     <div className="search-container">
-
                         <div className="settings">
                             <div>
                                 <label htmlFor="sort">Sort</label>
@@ -314,7 +319,6 @@
                             </div>
                         </div>
                         <input className="search-input" value={search} onChange={handleChangeSearch} />
-
                     </div>
 
 
